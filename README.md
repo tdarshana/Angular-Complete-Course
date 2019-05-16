@@ -653,7 +653,96 @@ In order to make component more reusable, we want to add bunch of input and outp
 
 ![Public API of a component](img/input output properties.png)
 
+#### Declaring Input Properties
 
+##### Using `@Input()` decorator
+
+First import `Input ` from `@angular/core` library and define input fields or properties like below.
+
+```typescript
+import { Component, OnInit, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-favorite',
+  templateUrl: './favorite.component.html',
+  styleUrls: ['./favorite.component.scss']
+})
+export class FavoriteComponent implements OnInit {
+  
+  @Input() isFavourite:boolean  
+  // Decorator in angular making fields & Properties as Input properties for a component
+}
+```
+
+Then we can use it inside **parent container** **as a input property to the current component**.
+
+```html
+<app-favorite [isFavourite]="post.isFavourite" (change)="onChangeUpdate()"></app-favorite>
+```
+
+
+
+##### Using `inputs` property of the Component
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-favorite',
+  templateUrl: './favorite.component.html',
+  styleUrls: ['./favorite.component.scss'],
+  inputs: ['isFavourite']
+})
+export class FavoriteComponent implements OnInit {
+  
+  	isFavourite:boolean  
+    // Decorator in angular making fields & Properties as Input properties for a component
+	// ...
+}
+```
+
+But there is a problem with this approach, even though this way has less code and less imports. 
+
+> ##### Working Code
+>
+> <small>**favourite.component.html**</small>
+>
+> ```html
+> <p [textContent] = "isSelecetd? '&#x02605;' : '&#x02606;'" (click)="onClick()"></p>
+> ```
+>
+> <small>**app.component.html**</small>
+>
+> ```html
+> <h1>Reusable Components</h1>
+> <app-favorite [isFavourite]="post.isFavourite" (change)="onChangeUpdate()"></app-favorite>
+> ```
+>
+> <small>**faviourite.component.ts**</small>
+>
+> ```typescript
+> import { Component, OnInit, Input } from '@angular/core';
+> 
+> @Component({
+>   selector: 'app-favorite',
+>   templateUrl: './favorite.component.html',
+>   styleUrls: ['./favorite.component.scss']
+> })
+> export class FavoriteComponent implements OnInit {
+>   
+>   @Input() isFavourite:boolean
+>   isSelecetd: boolean = false
+>   
+>   constructor() { }
+> 
+>   ngOnInit() {}
+> 
+>   onClick(){
+>     this.isSelecetd = !this.isSelecetd
+>   }
+> 
+> }
+> ```
 
 ## Angular Directives
 
