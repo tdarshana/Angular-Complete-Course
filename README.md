@@ -18,7 +18,7 @@ When an application become more and more complex, the structure become more comp
 
 ## Architecture of Angular Application
 
-![HTTP Architecture](img/HTTP Architecture.png)
+![HTTP Architecture](img/HTTPArchitecture.png)
 
 Front end : User Data, Presentation logic.
 
@@ -651,7 +651,7 @@ This will output summery result in the web browser as below.
 
 In order to make component more reusable, we want to add bunch of input and output properties. We use input properties pass input to the state of the component. We use output properties to raise events from this custom components. **The combination of input and output properties for a component**, make up the **public API of that component**. 
 
-![Public API of a component](img/input output properties.png)
+![Public API of a component](img/inputOutputProperties.png)
 
 #### Declaring Input Properties
 
