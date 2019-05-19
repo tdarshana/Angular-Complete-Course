@@ -716,6 +716,9 @@ But there is a problem with this approach, even though this way has less code an
 > ```html
 > <h1>Reusable Components</h1>
 > <app-favorite [isFavourite]="post.isFavourite" (change)="onChangeUpdate()"></app-favorite>
+> ...
+> <!-- Usage with alias (label) -->
+> <app-favorite [is-favourite]="post.isFavourite" (change)="onChangeUpdate()"></app-favorite>
 > ```
 >
 > <small>**faviourite.component.ts**</small>
@@ -724,25 +727,320 @@ But there is a problem with this approach, even though this way has less code an
 > import { Component, OnInit, Input } from '@angular/core';
 > 
 > @Component({
->   selector: 'app-favorite',
->   templateUrl: './favorite.component.html',
->   styleUrls: ['./favorite.component.scss']
+> selector: 'app-favorite',
+> templateUrl: './favorite.component.html',
+> styleUrls: ['./favorite.component.scss']
 > })
 > export class FavoriteComponent implements OnInit {
->   
->   @Input() isFavourite:boolean
->   isSelecetd: boolean = false
->   
->   constructor() { }
 > 
->   ngOnInit() {}
+> @Input('is-favourite') isFavourite:boolean	// 'is-favourite' is a alias (like a label)
+> isSelecetd: boolean = false
 > 
->   onClick(){
->     this.isSelecetd = !this.isSelecetd
->   }
+> constructor() { }
+> 
+> ngOnInit() {}
+> 
+> onClick(){
+>  this.isSelecetd = !this.isSelecetd
+> }
 > 
 > }
 > ```
+
+**Note** : Using alias is the best practice because, with code refactoring it wont affect on the HTML template. Even though `isFavourite` variable changes.  
+
+#### Declaring Output Properties
+
+As the following code, we can create an event named `change` and refer it in the parent component as `onFavoriteComponentChange` with the correct camel case. In this child component, when user clicks on the HTML element,  it will trigger an event via `this.change.emit();` in the parent component.
+
+<small>**favorite.component.ts**</small>
+
+```typescript
+import { ..., EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-favorite',
+  templateUrl: './favorite.component.html',
+  styleUrls: ['./favorite.component.scss']
+})
+export class FavoriteComponent implements OnInit {
+  ...
+  @Output() change = new EventEmitter();
+  @Output() click = new EventEmitter();
+
+  ...
+
+  onClick(){
+    this.isSelecetd = !this.isSelecetd
+    this.change.emit();
+    this.click.emit();
+  }
+
+}
+```
+
+<small>**app.component.ts**</small>
+
+ ```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
+})
+export class AppComponent {
+  post = {
+    title: "Title",
+    isFavourite: true
+  }
+
+  // Bind to chanage of the child
+  onFaviouriteChange(){
+    console.log('Faviourite changed!')
+  }
+
+  // Bind to click of the child
+  onFaviouriteClick(){
+    console.log('Faviourite clicked!')
+  }
+}
+ ```
+
+<small>**app.component.html**</small>
+
+```html
+<h1>Reusable Components</h1>
+<app-favorite [is-favourite]="post.isFavourite" (change)="onFaviouriteChange()" (click)="onFaviouriteClick()"></app-favorite>
+```
+
+This will pass an event from the child to the parent up to the hierarchy.
+
+![Output Event Demonstration](gif/OutputEvent_AngularComponent.gif)
+
+
+
+#### Pass data with events
+
+We can optionally pass some value when emitting the event `this.change.emit(<optional> value);`. Then it will available to all the subscribers. In this case `app` component.
+
+<small>**favorite.component.ts**</small>
+
+```typescript
+...
+export class FavoriteComponent implements OnInit {
+  
+  @Output() change = new EventEmitter();
+
+  isSelecetd: boolean = false
+  
+  onClick(){
+    this.isSelecetd = !this.isSelecetd
+    this.change.emit(this.isSelecetd);
+  }
+}
+```
+
+<small>**app.component.ts**</small>
+
+```typescript
+export class AppComponent {
+  ...
+  onFaviouriteChange(isFavourite){
+    console.log(`isFaviorite: ${isFavourite}`)
+  }
+}
+```
+
+<small>**app.component.html**</small>
+
+```html
+<app-favorite [is-favourite]="post.isFavourite" (change)="onFaviouriteChange($event)"></app-favorite>
+```
+
+In the HTML file we need to pass standard event object in order to use event passing like this way.
+
+![Passing Objects between components](gif/OutputEvent_AngularComponent_passing_objects.gif)
+
+In order to more structure the code and for the compile time checking of the passing argument, we can introduce a interfaces for the passing object. We can define it in the required component and import it.
+
+<small>**favorite.component.ts**</small>
+
+```typescript
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-favorite',
+  templateUrl: './favorite.component.html',
+  styleUrls: ['./favorite.component.scss']
+})
+export class FavoriteComponent implements OnInit {
+    
+  // Alias for 'change' -> 'change-click' and 
+  // we can refer it in the app component event as (change-click) in the angular way
+    
+  @Output('change-click') change = new EventEmitter(); 
+
+  isSelecetd: boolean = false
+  
+  onClick(){
+    this.isSelecetd = !this.isSelecetd
+    this.change.emit({ newValue: this.isSelecetd });
+  }
+}
+
+// Interfcae for the output object wrapping
+export interface FaviouriteChangesEvenetArgs {
+  newValue: true
+}
+```
+
+<small>**app.component.ts**</small>
+
+```typescript
+...
+import { FaviouriteChangesEvenetArgs } from './favorite/favorite.component';
+...
+export class AppComponent {
+  ...
+  onFaviouriteChange(eventArgs: { newValue:FaviouriteChangesEvenetArgs}){
+    console.log('isFaviorite: ', eventArgs)
+  }
+}
+```
+
+The output result would be the same as before but with more structured code.
+
+#### Templates
+
+```typescript
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  template: `
+		<h2> Header </h2>
+	`
+  styleUrls: ['./app.component.scss']
+})
+```
+
+We can use either `templateUrl` or in place template with `template` property of a component. There is no separate requests to the server for HTML's because they are already bundled and delivered with `main.bundle.js`. Its better to use in place template if you have 5 or less lines of code. Otherwise using external HTML template is the better way.
+
+#### Styles
+
+There are three ways to apply styles  to a component.
+
+* **Use `styleUrls` in the component.** If you are using a theme put it first in the array followed by other styles.
+* **Use `styles` and in place styling.**
+* **Put styles in the HTML component using `<style>` tags.** 
+
+```typescript
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  template: `
+		<h2> Header </h2>
+	`
+  styleUrls: ['./app.component.scss'],
+  styles:[
+      `
+      	backgroud: red;
+      `
+  ]
+})
+```
+
+**Style applying precedence**
+
+If you define multiple styles for the same element, from `styleUrls`, `styles` whichever defines last will be take ignoring the previous ones completely. If you define styles using on the template using `<style>`, it will be applied regardless of other styles and which are not defined in the template will be picked from the other styles which is defined in `styleUrls` or `styles`. **These styles only applied to the elements of the components**. 
+
+**Shadow DOM**
+
+**Allows us to apply scoped styles to elements without bleeding out to the outer world.** 
+
+```javascript
+var el = document.querySelector('favourite');
+var root = el.createShadowRoot();
+root.innterHTML = `
+	<style> h1 { color: red } </style>
+	<h1> Hello </h1>
+`;
+```
+
+Here we create a `shadowRoot` and apply element styles to that root. This won't leak the styles to the outside elements. 
+
+**View encapsulation of the Angular** : `ViewEncapsulation.Emulated` will bring shadow DOM into the Angular.
+
+```typescript
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+  encapsulation: ViewEncapsulation.Emulated
+})
+```
+
+`ViewEncapsulation.Native` is used to use the native shadow DOM if available.  If you lack of library like bootstrap, import it there, but it will introduce performance problems.
+
+```typescript
+encapsulation: ViewEncapsulation.None 
+```
+
+will introduce style bleeding. 
+
+
+
+#### `ngComponent`
+
+We can use the `ngComponent` to inject the content to a child component as follows.
+
+<small>**panel.component.ts**</small>
+
+```html
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <!-- Content will be replace this -->
+    <ng-content select=".heading"></ng-content>
+  </div>
+  <div class="panel-body">
+    <!-- Content will be replace this -->
+    <ng-content select=".body"></ng-content>
+  </div>
+</div>
+```
+
+The above `.heading` and `.body` selectors will be subjected to the replacements with the below content based on the CSS selector from the parent `app.component.html`. If you have only one `ng-content` you won't need the selector.
+
+<small>**app.component.html**</small>
+
+```html
+<bootstrap-panel>
+    <div class="heading">Heading</div>
+    <div class="body">
+        <h2>Body</h2>
+        <p>Some content here ... </p>
+    </div>
+</bootstrap-panel>
+```
+
+
+
+#### `ngContainer`
+
+We can use pass only the content using `ng-container` as follows.
+
+```html
+<bootstrap-panel>
+    <ng-container class="heading">Heading</ng-container>
+    <ng-container class="body">
+        <h2>Body</h2>
+        <p>Some content here ... </p>
+    </ng-container>
+</bootstrap-panel>
+```
+
+**This will only pass the content of the tag without the tag**. In the previous example we pass the data with the tag.
+
 
 ## Angular Directives
 
@@ -755,30 +1053,410 @@ There are two type of inbuilt directives in the Angular JS.
 
 #### `ngIf` Directive
 
+This is used to hide and show content based on some condition evaluation.
 
+<small>**app.component.ts**</small>
+
+```typescript
+import { Component, ViewEncapsulation } from '@angular/core';
+import { FaviouriteChangesEvenetArgs } from './favorite/favorite.component';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss'],
+  encapsulation: ViewEncapsulation.Emulated
+})
+export class AppComponent {
+  courses = [1, 2]
+}
+```
+
+<small>**app.component.html**</small>
+
+```html
+<div *ngIf="courses.length>0">
+    List of Courses
+</div>
+<div *ngIf="courses.length==0">
+    No courses Yet
+</div>
+```
+
+If the condition that evaluated is truthy, it will be added to the DOM, otherwise it will be **removed from the DOM**. 
+
+
+
+##### If and Else like approach using templates 
+
+<small>**app.component.html**</small>
+
+```html
+<div *ngIf="courses.length > 0; else noCourses">
+    List of Courses
+</div>
+<ng-template #noCourses>
+    No courses Yet
+</ng-template>
+```
+
+`courses.length > 0; else noCourses` will map to the `#noCourses` template if evaluation comes to the else condition. Hence, it will show the named template.
+
+Or use following fully template approach. 
+
+```html
+<div *ngIf="courses.length > 0; then coursesList else noCourses"></div>
+<ng-template #coursesList>
+    Courses List
+</ng-template>
+<ng-template #noCourses>
+    No courses Yet
+</ng-template>
+```
+
+
+
+##### Using Hidden attribute
+
+```html
+<div [hidden]="courses.length == 0">
+    List of Courses
+</div>
+<div [hidden]="courses.length > 0">
+    No courses Yet
+</div>
+```
+
+The main difference is that this approach will hide the HTML after rendering it. Its an additional workload to the computer. Its good to use `ngIf` for large tree of child elements, also angular going detect changes even for this hidden elements too. But in some situations, building large sub tree will be costly. Then you can build it prior point and hide it for later using HTML `hidden` property.
+
+
+
+#### `ngSwitch Case ` Directive
+
+This is used when we need multiple matching scenarios.
+
+<small>**app.component.html**</small>
+
+```html
+<ul class="nav nav-pills nav-fill">
+    <li class="nav-item" [class.active]="viewMode=='map'"><a (click)="viewMode='map'">Map View</a></li>
+    <li class="nav-item" [class.active]="viewMode=='list'"><a (click)="viewMode='list'">List View</a></li>
+</ul>
+
+<div [ngSwitch]="viewMode">
+    <div *ngSwitchCase="'map'">Map View Content</div>
+    <div *ngSwitchCase="'list'">List view Component</div>
+    <div *ngSwitchDefault>Otherwise</div>
+</div>
+```
+
+<small>**app.component.html**</small>
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
+})
+
+export class AppComponent {
+    viewMode = 'map'
+}
+```
 
 
 
 #### `ngFor` Directive
 
+This directive is used to render list of objects.
+
+<small>**app.component.html**</small>
+
 ```html
 <ul>
-    <li *ngFor="let course in courses; index as i; even as isEven">
-    	{{i}} - {{ course.name }} -- {{isEven}}
+    <li *ngFor="let course of courses; index as i; even as isEven">
+        {{i}} - {{ course.name }} -- <span *ngIf="isEven">(EVEN)</span>
     </li>
 </ul>
 ```
 
+This has set of in built attributes.
 
-#### `ngSwitch` Directive
+##### `ngFor` and Change Detection
+
+<small>**app.component.ts**</small>
+
+```typescript
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
+})
+
+export class AppComponent {
+    viewMode = 'map'
+    courses = [
+      { id:1, name: 'course1' },
+      { id:2, name: 'course2' },
+      { id:2, name: 'course3' },
+    ]
+
+    onAdd(){
+      this.courses.push({ id:3, name: 'course4' },)
+    }
+    
+    onRemove(course){
+      this.courses.splice(this.courses.indexOf(course), 1);
+    }
+}
+```
+
+<small>**app.component.html**</small>
+
+```html
+<button (click)="onAdd()">Add</button>
+<ul>
+    <li *ngFor="let course of courses">
+        {{ course.name }}
+        <button (click)="onRemove(course)">Remove</button>
+    </li>
+</ul>
+```
+
+This will add a new course to the list and it will immediately be displayed in the web page. Angular will detect the change and do the rendering of the component for us automatically. Angular change detection will fire in below events.
+
+![Angular Change Detection](img/AngularChangeDetection.png)
+
+##### Optimizing `ngFor` for Complex Markups
+
+<small>**app.component.html**</small>
+
+```html
+<button (click)="onAdd()">Add</button>
+<ul>
+    <li *ngFor="let course of courses; trackBy: trackCourses">
+        {{ course.name }}
+        <button (click)="onRemove(course)">Remove</button>
+    </li>
+</ul>
+```
+
+The problem is Angular tracks objects not by its content. Hence, when we reloading the objects list, it will re render the DOM for all the available objects. This is costly. To avoid that, we can provide custom attribute the track objects using `trackBy` keyword as above.
+
+<small>**app.component.ts**</small>
+
+```typescript
+export class AppComponent {
+    viewMode = 'map'
+    courses;
+
+    loadCourses(){
+      this.courses = [
+        { id:1, name: 'course1' },
+        { id:2, name: 'course2' },
+        { id:2, name: 'course3' },
+      ]
+    }
+
+    trackCourse(index, course){
+      return course ? course.id : undefined
+    }
+}
+```
+
+Here, this `course` object list will be tracked by id instead of the default object identity. Therefore re-rendering will not be happen for the component list.  Its better to use it wherever it needs to render complex markup.
+
+##### Leading asterisk `*` in Angular 
+
+Its going to re-write the markup using angular template and property.
+
+```html
+<div *ngIf="courses.length > 0; then coursesList else noCourses"></div>
+<ng-template #coursesList>
+    Courses List
+</ng-template>
+<ng-template #noCourses>
+    No courses Yet
+</ng-template>
+```
+
+It will convert above code into below code. But its better to left the hard work for the Angular itself, rather then doing it manually.
+
+```html
+<div *ngIf="courses.length > 0; else noCourses"></div>
+<ng-template [ng-If]="courses.length > 0">
+    Courses List
+</ng-template>
+<ng-template [ng-If]="!(courses.length > 0)">
+    No courses Yet
+</ng-template>
+```
 
 
 
+#### `ngClass` directive
 
+This is an attribute directive, that can be used to change attributes of the DOM elements.
+
+```html
+<span
+    class="glyphicon"
+    [class.glyphicon-star]="isFavourite"
+    [class.glyphicon-star-empty]="!isFavourite"
+    ></span>
+```
+
+The above code can be easily re-write using `ngClass`. If the argument is evaluated as true, its going to add that as a style class. Otherwise it wont be rendered.
+
+```html
+<span
+    class="glyphicon"
+    [ngClass]="{
+        'glyphicon-star': isFavourite,
+        'glyphicon-star-empty': !isFavourite
+    }"
+    ></span>
+```
+
+
+
+#### `ngStyle` directive
+
+```html
+<button
+    [style.backgroundColor]="canSave ? 'blue': 'gray'"
+    [style.color]="canSave ? 'white': 'black'"
+    [style.fontWeight]="canSave ? 'bold':'normal'"
+>Save</button>
+```
+
+Instead of the multiple CSS conditional styles, we can use `ngStyle` to apply it all-together in more concise way.
+
+```html
+<button
+    [ngStyle] = "{
+        'backgroundColor' : canSave ? 'blue': 'gray',
+        'color' : canSave ? 'white': 'black',
+        'fontWeight' ? canSave ? 'bold':'normal'
+    }"
+>Save</button>
+```
+
+
+
+#### Safe Traversal Operator
+
+When we implementing real world applications some objects wont be available at the starting point. Therefore, application wont be able to access the attributes of the objects. In this case we can use `ngIf` or `?` operator.
+
+<small>**app.component.ts**</small>
+
+```typescript
+export class AppComponent {
+    task = {
+      title: 'Review Application',
+      assignee: {
+        name: 'John Smith' 
+      }
+    }
+}
+```
+
+<small>**app.component.html**</small>
+
+```html
+<span *ngIf='task.assignee'>{{task.assignee.name}}</span>
+```
+
+or use `?` as below.
+
+```html
+<span>{{task.assignee?.name}}</span>
+```
+
+This won't output an error in the console if that particular object is not available. 
 
 ### Custom Directives
 
+We can use custom directive to have more control over behavior of DOM elements. We can pass the data to custom directives using input properties. If that directive has only one input property, we can use selector of that property as the alias of that property and simplify the usage of the custom directive. And we can use `HostListener` decorator to subscribe events that happens on host DOM object.
 
+**Creating a custom directive using CLI**
+
+```bash
+ng g d <directive name>
+```
+
+The above command of the Angular CLI will generate a custom component as below and it will automatically registered in the base module's  `declarations`.
+
+![Custom Directive Created](img/CreateAngularCustomDirective.png)
+
+The default boilerplate code for the custom directive will be like below.
+
+```typescript
+import { Directive } from '@angular/core';
+
+@Directive({
+  selector: '[appInputFormat]'
+})
+export class InputFormatDirective {
+
+  constructor() { }
+
+}
+```
+
+
+
+The following code section shows how to use it in a HTML template. The commented section showing that how to infer a scenario that using the custom directive selector as an alias of that property, if that directive has only one input property.
+
+```html
+<input type="text" appInputFormat [format]="'uppercase'">
+
+<!-- <input type="text" [appInputFormat]="'uppercase'"> -->
+```
+
+<small>**input-format.directive.ts**</small>
+
+```typescript
+import { Directive , HostListener, ElementRef, Input} from '@angular/core';
+
+// HostListener : Allow to Subscribe to the evenets from the  host that hold this directive
+
+@Directive({
+  selector: '[appInputFormat]'
+})
+export class InputFormatDirective {
+
+  @Input('format') format;
+   
+  // @Input('appInputFormat') format;  // [appInputFormat]="'uppercase'"
+
+  constructor(private el:ElementRef) { }
+
+  @HostListener('focus') onFocus(){
+    console.log("on Focus")
+  }
+
+  @HostListener('blur') onBlur(){
+    let value:string = this.el.nativeElement.value;
+    if(this.format== 'lowercase'){
+      this.el.nativeElement.value = value.toLowerCase()
+    } else {
+      this.el.nativeElement.value = value.toUpperCase()
+    }
+  }
+}
+
+```
+
+The above code shows the implementation of that custom directive.
+
+
+
+## Template-driven Forms in Angular
 
 
 
