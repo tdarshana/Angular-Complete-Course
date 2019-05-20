@@ -1458,9 +1458,259 @@ The above code shows the implementation of that custom directive.
 
 ## Template-driven Forms in Angular
 
+Create a `contact-form` component  using Angular CLI as below. And add the following markup to create the initial HTML-Bootstrap form component.
+
+<small>**commands to create the from**</small>
+
+```bash
+ng new template-driven-forms		# Create a new Angular Project
+cd template-driven-forms	
+npm install bootstrap --save		# Install Bootstrap
+ng g c contact-form					# Create a component named, contact-form
+```
+
+<small>**contact-form.component.html**</small>
+
+```html
+<form>
+  <div class="form-group">
+      <label for="firstName"></label>
+      <input ngModel name="firstName" id="firstName" type="text" class="form-control">
+  </div>
+  <div class="form-group">
+    <label for="comment"></label>
+    <textarea ngModel name="comment" id="comment" cols="30" rows="10" class="form-control"></textarea>
+  </div>  
+  <button class="btn btn-primary">Submit</button>
+</form>
+```
+
+In the template driven approach, we apply `ngModel` directive to our input field, and Angular will automatically create an instance of form control class `FormControl` and associate with that input field under the hood. That name attribute will take as the key for the input field value. 
+
+To observe the `ngModel` object we follow the below procedure to log it on to the console.
+
+<small>**contact-form.component.html**</small>
+
+```html
+<div class="form-group">
+      <label for="firstName"></label>
+      <input ngModel name="firstName" #firstName="ngModel" (change)="log(firstName)" id="firstName" type="text" class="form-control">
+</div>
+...
+```
+
+<small>**contact-form.component.ts**</small>
+
+```typescript
+...
+export class ContactFormComponent {
+  log(x){
+    console.log(x)
+  }
+}
+```
+
+And it will show the `ngModel` object in the console as in the following image. 
+
+![ngModel on the console](img/FormControlObjectonChromTerminal.png)
+
+  Here we can clearly see that `NgModel` has `FormControl(NgModel.control.<prop>)` object embedded in and the latter has set of properties. And `ngModel` has some of the delegated **computed properties** from the `FormControl` object in it. Most of the properties exists as pairs. 
+
+​	Eg: dirty-pristine,  valid-invalid, enabled-disabled, touched-untouched
+
+And some are single attributes
+
+​	Eg: name, value, errors, parent, root, status, updateOn
+
+We can use this **`FormControl` instance to track state changes and validate input fields**.
+
+Also we have another object as `FormGroup` that is collection of `FormControl`. That `FormGroup` also delegates all the `FromControl` objects associated with it and will maintain ad calculated property list. Hence its easier to check the whole form for validation. This way we can keep track of the state of the input fields and the entire form as a whole.
+
+![FormControl](img/formCotrol.png)
+
+There are two ways to create these control objects for a form. 
+
+* **Template Driven Forms**: Applying some predefined directives in our template. Then Angular will create control objects implicitly under the hood. This approach is simple and good for less complex forms with less coding.
+* **Reactive Forms:** We can also create form control objects by explicitly coding them. We have more control over validation logic. And also unit test validation logic is possible.
+
+In angular we has few built in validators based on HTML5 form validation attributes. 
+
+```html
+<div class="form-group">
+      <label for="firstName">First Name</label>
+      <input 
+        required 
+        minlength="3" 
+        maxlength="10" 
+        pattern="[A-Za-z]{3,10}" 
+        ngModel 
+        name="firstName" 
+        #firstName="ngModel" 
+        (change)="log(firstName)" 
+        id="firstName" 
+        type="text" 
+        class="form-control">
+      <div 
+        class="alert alert-danger" 
+        *ngIf="firstName.touched && !firstName.valid">
+        <div *ngIf="firstName.errors.required">
+          First Name id Required
+        </div>
+        <div *ngIf="firstName.errors.minlength">
+          First Name should have at least {{firstName.errors.minlength.requiredLength}} characters
+        </div>
+        <div *ngIf="firstName.errors.maxlength">
+          First Name should have less than {{firstName.errors.maxlength.requiredLength}} characters
+        </div>
+        <div *ngIf="firstName.errors.pattern">
+          First Name doesnt match the pattern
+        </div>
+      </div><source>
+  </div>
+```
+
+According to the above code, we add default HTML5 validation attributes, and we get properties of the `ngModel` object to evaluate this input field for specific errors (Eg: `firstName.errors.minlength`) and also for attributes (Eg: `firstName.errors.minlength.requiredLength`).
+
+##### `ngForm` directive
+
+If a HTML form is defined without any definitions, Angular will automatically apply `ngForm` directive there. We can access it as follows. Also it also expose output property called `ngSubmit`. 
+
+<small>**contact-form.component.html**</small>
+
+```html
+<form #form="ngForm" (ngSubmit)="submit(form)">
+  <div class="form-group">
+  ...
+</form>
+```
+
+<small>**contact-form.component.ts**</small>
+
+```typescript
+  submit(form){
+    console.log(form)
+  }
+```
+
+The output will be the `ngForm` object. It also has `formGroup` objects in it. Also has some delegated computed properties from the child objects. 
+
+​	Eg: We can access the validity of the total from like `form.valid`.
+
+> **Note**
+>
+> `form.value` object is a JSON representation of the form and its values. We can directly use it for sending to an API or persistence.
 
 
 
+##### `ngModelGroup` directive
+
+We can use this directive to group up input components into groups. This will add hierarchical structure to the `form.value` property that represents the JSON format of the form. 
+
+```html
+<form #form="ngForm" (ngSubmit)="submit(form)">
+    <div ngModelGroup="contact" #contact="ngModelGroup">
+        <div *ngIf="contact.valid"><!-- Validation messages for the Group --></div>
+        <div class="form-group">
+        ...
+    </div>
+</form>
+```
+
+Also we can referenced `ngModelGroup` to validate the entire group section as a whole.
+
+##### Adding a checkbox
+
+```html
+<div class="checkbox">
+    <label for="">
+      <input type="checkbox" ngModel name="isSubscribed"> Subscribe to the mailing list
+    </label>
+  </div>
+  <p>
+    {{form.value | json}}
+  </p>
+```
+
+Above code will added additionally to the `contact-from.component.html` that will render a Bootstrap style check-box for us. 
+
+Here also, the value is tracked by `ngModel` and `name` attribute of the input element. Here whats inside `<p>` is used to real time tracking of the attributes and values of the from in the front-end.
+
+![Template Driven Bootstrap Form](img/TeaplateDrivenForm.png)
+
+##### Disabling the Submit
+
+We can simply do the following to disable the submit button if the form is not valid.
+
+```html
+<button class="btn btn-primary" [disabled]="!form.valid"> Submit</button>
+```
+
+##### Working with drop-down lists.
+
+```html
+  <div class="form-group">
+    <label for="contactMethod">Contact Method</label>
+    <select ngModel name="contactMethod" id="contactMethod" class="form-control">
+      <option value=""></option>
+      <option *ngFor="let method of contactMethods" [value]="method.id">{{method.name}}</option>
+    </select>
+  </div>
+```
+
+Using the above code, we can add a drop-down list into our comment form. If you need to represent actual object as the value of the drop-down, use `[ngValue]="method"` instead of `[value]="method.id"`.  `ngValue` is a attribute directive that exposes `ngValue` property. This can be bind to a complex object like `method` object here. The change in the value will be as follows.
+
+![ngValue Binding of Complex Objects](img/ngValueBinding.png)
+
+###### Multiple Selector
+
+We can use the multiple selector by adding `multiple` keyword to the existing drop-down list. Here, Angular will choose array of objects as the value representation of that HTML element.
+
+```html
+<select multiple ngModel name="contactMethod" id="contactMethod" class="form-control">
+      <option value=""></option>
+      <option *ngFor="let method of contactMethods" [value]="method.id">{{method.name}}</option>
+    </select>
+```
+
+![Multiple option selector](img/MultipleSelectOptions.png)
+
+
+
+##### Radio buttons
+
+We can add hard coded radio buttons as below. That is also binded with `ngModel` and will represent in the `ngForm` object. 
+
+```html
+  <div class="radio">
+    <label for="">
+      <input ngModel type="radio" name="contactMethid" value="1">
+      Email
+    </label>
+  </div>
+  <div class="radio">
+      <label for="">
+        <input ngModel type="radio" name="contactMethid" value="2">
+        Phone
+      </label>
+  </div>
+```
+
+Or we can use dynamically generated radio buttons as follows.
+
+```html
+  <div *ngFor="let method of contactMethods" class="radio">
+    <label for="contactMethid">
+      <input ngModel type="radio" name="contactMethid" [value]="method.id">
+      {{method.name}}
+    </label>
+  </div>
+```
+
+
+
+
+
+****
 
 #### Whats not here.
 
